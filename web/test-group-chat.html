@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshChat Group Interface - 4 Users Online</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: 0 auto;
+            background: #2a2a2a;
+        }
+
+        .header {
+            background: #007AFF;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .tab-bar {
+            display: flex;
+            background: #333;
+            border-bottom: 1px solid #555;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: #333;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #007AFF;
+            color: white;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .online-count {
+            text-align: center;
+            color: #00FF00;
+            margin-bottom: 15px;
+            font-weight: bold;
+            background: #333;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 12px;
+            background: #333;
+            border-left: 4px solid #007AFF;
+        }
+
+        .message.own {
+            background: #0066CC;
+            border-left-color: #00FF00;
+            margin-left: 20px;
+        }
+
+        .message.emergency {
+            background: #FF6B6B;
+            border-left-color: #FFD700;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .sender-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sender-name {
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .sender-location {
+            font-size: 12px;
+            color: #00FF88;
+            background: rgba(0, 255, 136, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .message-content {
+            color: #fff;
+            line-height: 1.4;
+        }
+
+        .message-input-container {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #333;
+            border-radius: 12px;
+            margin-top: auto;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #1a1a1a;
+            color: white;
+            font-size: 16px;
+        }
+
+        .send-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #007AFF;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .send-button:hover {
+            background: #0056CC;
+            transform: translateY(-2px);
+        }
+
+        .emergency-button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            background: #FF6B6B;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Users/Map View */
+        .users-view {
+            display: none;
+        }
+
+        .users-view.active {
+            display: block;
+        }
+
+        .compass {
+            width: 250px;
+            height: 250px;
+            border: 3px solid #007AFF;
+            border-radius: 50%;
+            margin: 20px auto;
+            position: relative;
+            background: radial-gradient(circle, #1a1a1a 0%, #333 100%);
+        }
+
+        .compass-center {
+            width: 20px;
+            height: 20px;
+            background: #FFD700;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .compass-direction {
+            position: absolute;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .north { top: 10px; left: 50%; transform: translateX(-50%); }
+        .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .east { right: 10px; top: 50%; transform: translateY(-50%); }
+        .west { left: 10px; top: 50%; transform: translateY(-50%); }
+
+        .user-marker {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .user-marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .user-alice { background: #FF6B6B; top: 30%; left: 70%; }
+        .user-bob { background: #4ECDC4; top: 70%; left: 30%; }
+        .user-dave { background: #96CEB4; top: 80%; left: 80%; }
+
+        .users-list {
+            margin-top: 20px;
+        }
+
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #333;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .user-item:hover {
+            background: #404040;
+            transform: translateX(5px);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: bold;
+        }
+
+        .user-status {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .user-distance {
+            font-size: 14px;
+            color: #00FF88;
+        }
+
+        .map-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .map-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .primary-button {
+            background: #007AFF;
+            color: white;
+        }
+
+        .secondary-button {
+            background: #666;
+            color: white;
+        }
+
+        .map-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            color: #888;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .typing-indicator.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            📱 MeshChat Group
+        </div>
+        
+        <div class="tab-bar">
+            <button class="tab active" onclick="showTab('chat')">💬 Group Chat</button>
+            <button class="tab" onclick="showTab('users')">👥 Users</button>
+        </div>
+
+        <div class="content">
+            <!-- Group Chat Tab -->
+            <div id="chat-tab" class="chat-view">
+                <div class="online-count">
+                    👥 4 people online in range
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Alice's message -->
+                    <div class="message">
+                        <div class="message-header">
+                            <div class="sender-info">
+                                <span class="sender-name">Alice</span>
+                                <span class="sender-location">150m ↗</span>
+                            </div>
+                            <div class="message-time">2 min ago</div>
+                        </div>
+                        <div class="message-content">
+                            Hey everyone, where should we meet up? I can see the lake from here 🏞️
+                        </div>
+                    </div>
+
+                    <!-- Bob's message -->
+                    <div class="message">
+                        <div class="message-header">
+                            <div class="sender-info">
+                                <span class="sender-name">Bob</span>
+                                <span class="sender-location">300m ↙</span>
+                            </div>
+                            <div class="message-time">5 min ago</div>
+                        </div>
+                        <div class="message-content">
+                            Found the perfect campsite! It's got water access and good cell tower view 📍
+                        </div>
+                    </div>
+
+                    <!-- Your message -->
+                    <div class="message own">
+                        <div class="message-header">
+                            <div class="sender-info">
+                                <span class="sender-name">You</span>
+                                <span class="sender-location">—</span>
+                            </div>
+                            <div class="message-time">8 min ago</div>
+                        </div>
+                        <div class="message-content">
+                            On my way! Should be there in 10 minutes
+                        </div>
+                    </div>
+
+                    <!-- Dave's message -->
+                    <div class="message">
+                        <div class="message-header">
+                            <div class="sender-info">
+                                <span class="sender-name">Dave</span>
+                                <span class="sender-location">75m ↘</span>
+                            </div>
+                            <div class="message-time">1 min ago</div>
+                        </div>
+                        <div class="message-content">
+                            I can see Alice from here! Wave if you see me! 👋
+                        </div>
+                    </div>
+
+                    <!-- Emergency example (hidden by default) -->
+                    <div class="message emergency" id="emergencyMessage" style="display: none;">
+                        <div class="message-header">
+                            <div class="sender-info">
+                                <span class="sender-name">⚠️ EMERGENCY - Bob</span>
+                                <span class="sender-location">300m ↙</span>
+                            </div>
+                            <div class="message-time">Just now</div>
+                        </div>
+                        <div class="message-content">
+                            🆘 HELP! Injured at campsite, need medical assistance immediately!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="typing-indicator" id="typingIndicator">
+                    Dave is typing...
+                </div>
+
+                <div class="message-input-container">
+                    <input type="text" class="message-input" id="messageInput" placeholder="Message the group..." onkeypress="handleKeyPress(event)">
+                    <button class="emergency-button" onclick="sendEmergency()">🆘</button>
+                    <button class="send-button" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+            <!-- Users/Map Tab -->
+            <div id="users-tab" class="users-view">
+                <h3 style="text-align: center; margin-bottom: 20px;">👥 Group Members</h3>
+                
+                <div class="compass">
+                    <div class="compass-direction north">N</div>
+                    <div class="compass-direction south">S</div>
+                    <div class="compass-direction east">E</div>
+                    <div class="compass-direction west">W</div>
+                    
+                    <div class="compass-center" title="You are here"></div>
+                    
+                    <div class="user-marker user-alice" title="Alice - 150m NE" onclick="navigateToUser('Alice')">A</div>
+                    <div class="user-marker user-bob" title="Bob - 300m SW" onclick="navigateToUser('Bob')">B</div>
+                    <div class="user-marker user-dave" title="Dave - 75m SE" onclick="navigateToUser('Dave')">D</div>
+                </div>
+
+                <div class="users-list">
+                    <div class="user-item" onclick="navigateToUser('Alice')">
+                        <div class="user-info">
+                            <div class="user-avatar" style="background: #FF6B6B;">A</div>
+                            <div class="user-details">
+                                <div class="user-name">Alice</div>
+                                <div class="user-status">Active 2 min ago</div>
+                            </div>
+                        </div>
+                        <div class="user-distance">150m ↗</div>
+                    </div>
+
+                    <div class="user-item" onclick="navigateToUser('Bob')">
+                        <div class="user-info">
+                            <div class="user-avatar" style="background: #4ECDC4;">B</div>
+                            <div class="user-details">
+                                <div class="user-name">Bob</div>
+                                <div class="user-status">Active 5 min ago</div>
+                            </div>
+                        </div>
+                        <div class="user-distance">300m ↙</div>
+                    </div>
+
+                    <div class="user-item" onclick="navigateToUser('Dave')">
+                        <div class="user-info">
+                            <div class="user-avatar" style="background: #96CEB4;">D</div>
+                            <div class="user-details">
+                                <div class="user-name">Dave</div>
+                                <div class="user-status">Active 1 min ago</div>
+                            </div>
+                        </div>
+                        <div class="user-distance">75m ↘</div>
+                    </div>
+                </div>
+
+                <div class="map-buttons">
+                    <button class="map-button secondary-button" onclick="refreshPositions()">
+                        📡 Refresh Positions
+                    </button>
+                    <button class="map-button primary-button" onclick="showTab('chat')">
+                        💬 Back to Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let messageCount = 4;
+
+        function showTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide content
+            document.getElementById('chat-tab').style.display = tab === 'chat' ? 'block' : 'none';
+            document.getElementById('users-tab').style.display = tab === 'users' ? 'block' : 'none';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            } else {
+                // Show typing indicator briefly
+                const indicator = document.getElementById('typingIndicator');
+                indicator.textContent = 'You are typing...';
+                indicator.classList.add('show');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 2000);
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                const chatMessages = document.getElementById('chatMessages');
+                const newMessage = document.createElement('div');
+                newMessage.className = 'message own';
+                newMessage.innerHTML = `
+                    <div class="message-header">
+                        <div class="sender-info">
+                            <span class="sender-name">You</span>
+                            <span class="sender-location">—</span>
+                        </div>
+                        <div class="message-time">Just now</div>
+                    </div>
+                    <div class="message-content">${message}</div>
+                `;
+                
+                chatMessages.appendChild(newMessage);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                input.value = '';
+                
+                // Simulate response after 3 seconds
+                setTimeout(() => {
+                    simulateResponse();
+                }, 3000);
+            }
+        }
+
+        function sendEmergency() {
+            const emergencyMsg = document.getElementById('emergencyMessage');
+            emergencyMsg.style.display = 'block';
+            
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            alert('🆘 EMERGENCY MESSAGE SENT!\nBroadcast to all devices in range with priority routing.');
+        }
+
+        function simulateResponse() {
+            const responses = [
+                { sender: 'Alice', location: '150m ↗', message: 'Got it! See you soon 👍' },
+                { sender: 'Bob', location: '300m ↙', message: 'Roger that, campsite is ready!' },
+                { sender: 'Dave', location: '75m ↘', message: 'I\'ll meet you halfway' }
+            ];
+            
+            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+            const chatMessages = document.getElementById('chatMessages');
+            const newMessage = document.createElement('div');
+            newMessage.className = 'message';
+            newMessage.innerHTML = `
+                <div class="message-header">
+                    <div class="sender-info">
+                        <span class="sender-name">${randomResponse.sender}</span>
+                        <span class="sender-location">${randomResponse.location}</span>
+                    </div>
+                    <div class="message-time">Just now</div>
+                </div>
+                <div class="message-content">${randomResponse.message}</div>
+            `;
+            
+            chatMessages.appendChild(newMessage);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function navigateToUser(userName) {
+            alert(`🧭 Navigation started to ${userName}!\nFollow the compass direction to reach them.`);
+        }
+
+        function refreshPositions() {
+            alert('📡 Refreshing positions...\nScanning for nearby devices and updating locations.');
+            
+            // Simulate position updates
+            setTimeout(() => {
+                alert('✅ Positions updated!\n• Alice: 145m ↗\n• Bob: 295m ↙\n• Dave: 80m ↘');
+            }, 2000);
+        }
+
+        // Simulate typing indicators
+        setInterval(() => {
+            if (Math.random() < 0.1) { // 10% chance every 5 seconds
+                const users = ['Alice', 'Bob', 'Dave'];
+                const randomUser = users[Math.floor(Math.random() * users.length)];
+                const indicator = document.getElementById('typingIndicator');
+                indicator.textContent = `${randomUser} is typing...`;
+                indicator.classList.add('show');
+                
+                setTimeout(() => {
+                    indicator.classList.remove('show');
+                }, 3000);
+            }
+        }, 5000);
+
+        // Auto-scroll chat to bottom on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    </script>
+</body>
+</html>

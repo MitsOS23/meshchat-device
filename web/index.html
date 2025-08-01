@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2196F3">
+    <title>MeshChat</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192x192.png">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>MeshChat</h1>
+                <div class="connection-status" id="connectionStatus">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    <span id="statusText">Disconnected</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel" id="connectionPanel">
+            <button id="connectBtn" class="connect-btn">Connect to MeshChat Device</button>
+            <div class="device-info" id="deviceInfo" style="display: none;">
+                <p>Device: <span id="deviceName">-</span></p>
+                <p>Battery: <span id="batteryLevel">-</span></p>
+                <p>Network: <span id="networkStatus">-</span></p>
+            </div>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container" id="chatContainer" style="display: none;">
+            <!-- Contact List -->
+            <div class="contact-list" id="contactList">
+                <h3>Nearby Devices</h3>
+                <div class="contacts" id="contacts">
+                    <div class="contact broadcast-contact" data-id="broadcast">
+                        <div class="contact-avatar">📢</div>
+                        <div class="contact-info">
+                            <span class="contact-name">Broadcast</span>
+                            <span class="contact-status">Everyone</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages Area -->
+            <div class="messages-area">
+                <div class="chat-header">
+                    <span id="chatTitle">Select a contact</span>
+                    <button id="emergencyBtn" class="emergency-btn" style="display: none;">🚨 Emergency</button>
+                </div>
+                
+                <div class="messages" id="messages">
+                    <div class="welcome-message">
+                        <h3>Welcome to MeshChat!</h3>
+                        <p>Connect to a MeshChat device to start messaging off-grid.</p>
+                        <ul>
+                            <li>📡 2km range without cell towers</li>
+                            <li>🔋 Solar powered operation</li>
+                            <li>🌐 Mesh networking for extended range</li>
+                            <li>🔒 End-to-end encryption</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="message-input-container" id="messageInputContainer" style="display: none;">
+                    <div class="message-input">
+                        <input type="text" id="messageText" placeholder="Type a message..." maxlength="255">
+                        <button id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mesh Visualization (Optional) -->
+        <div class="mesh-overlay" id="meshOverlay" style="display: none;">
+            <div class="mesh-container">
+                <h3>Mesh Network</h3>
+                <canvas id="meshCanvas" width="300" height="200"></canvas>
+                <button id="closeMeshBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/bluetooth.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/mesh.js"></script>
+    <script>
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeBluetooth();
+            initializeChat();
+            initializeMesh();
+        });
+    </script>
+</body>
+</html>

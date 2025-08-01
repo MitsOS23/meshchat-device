@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshChat Pocket Mode - Direction Finding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: 0 auto;
+            background: #2a2a2a;
+        }
+
+        .header {
+            background: #007AFF;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .target-info {
+            background: #333;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007AFF;
+        }
+
+        .target-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 10px;
+        }
+
+        .target-distance {
+            font-size: 18px;
+            color: #00FF88;
+            margin-bottom: 5px;
+        }
+
+        .signal-strength {
+            font-size: 16px;
+            color: #ccc;
+        }
+
+        .direction-indicator {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 3px solid #333;
+        }
+
+        .direction-text {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: all 0.5s;
+        }
+
+        .warmer {
+            color: #FF6B6B;
+            text-shadow: 0 0 20px #FF6B6B;
+        }
+
+        .colder {
+            color: #4ECDC4;
+            text-shadow: 0 0 20px #4ECDC4;
+        }
+
+        .perfect {
+            color: #00FF00;
+            text-shadow: 0 0 30px #00FF00;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .instruction {
+            font-size: 16px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .phone-compass {
+            background: #333;
+            border-radius: 50%;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+            position: relative;
+            border: 3px solid #007AFF;
+        }
+
+        .compass-needle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 80px;
+            background: linear-gradient(to top, #FF6B6B 50%, #FFD700 50%);
+            transform-origin: center bottom;
+            transform: translate(-50%, -100%) rotate(45deg);
+            transition: transform 0.5s;
+        }
+
+        .compass-direction {
+            position: absolute;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .north { top: 10px; left: 50%; transform: translateX(-50%); }
+        .south { bottom: 10px; left: 50%; transform: translateX(-50%); }
+        .east { right: 15px; top: 50%; transform: translateY(-50%); }
+        .west { left: 15px; top: 50%; transform: translateY(-50%); }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .primary-button {
+            background: #007AFF;
+            color: white;
+        }
+
+        .secondary-button {
+            background: #666;
+            color: white;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .rssi-bar {
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rssi-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: all 0.5s;
+        }
+
+        .movement-tips {
+            background: #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .tip {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .device-connected { background: #00FF00; }
+        .signal-strength { background: #FFD700; }
+
+        .pocket-icon {
+            font-size: 48px;
+            margin: 10px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            🧭 Finding Alice
+        </div>
+
+        <div class="content">
+            <div class="target-info">
+                <div class="target-name">
+                    <span class="status-indicator device-connected"></span>
+                    Alice
+                </div>
+                <div class="target-distance">~150m away</div>
+                <div class="signal-strength">
+                    <span class="status-indicator signal-strength"></span>
+                    Signal: Strong
+                </div>
+            </div>
+
+            <div class="direction-indicator">
+                <div class="direction-text" id="directionText">WARMER! 🔥</div>
+                <div class="instruction">Keep walking in this direction</div>
+                
+                <div class="rssi-bar">
+                    <div class="rssi-fill" id="rssiFill" style="width: 75%; background: linear-gradient(90deg, #FF6B6B, #FFD700);"></div>
+                </div>
+            </div>
+
+            <div class="phone-compass">
+                <div class="compass-direction north">N</div>
+                <div class="compass-direction south">S</div>
+                <div class="compass-direction east">E</div>
+                <div class="compass-direction west">W</div>
+                <div class="compass-needle" id="compassNeedle"></div>
+            </div>
+
+            <div style="text-align: center; color: #888; margin: 10px 0;">
+                📱 Phone compass shows YOUR direction<br>
+                <span class="pocket-icon">👖</span><br>
+                Device in pocket (any orientation)
+            </div>
+
+            <div class="action-buttons">
+                <button class="action-button secondary-button" onclick="switchMode()">
+                    📊 Triangulation
+                </button>
+                <button class="action-button primary-button" onclick="foundTarget()">
+                    ✅ Found Alice!
+                </button>
+            </div>
+
+            <div class="movement-tips">
+                <h4 style="color: #FFD700; margin-bottom: 10px;">🚶 Movement Tips:</h4>
+                <div class="tip">🔥 <strong>WARMER</strong> = You're walking toward Alice</div>
+                <div class="tip">🧊 <strong>COLDER</strong> = You're walking away from Alice</div>
+                <div class="tip">🎯 <strong>PERFECT</strong> = You found Alice!</div>
+                <div class="tip">📱 Phone compass shows which way YOU are facing</div>
+                <div class="tip">👖 Device can be in any pocket position</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRSSI = 75;
+        let targetAngle = 45; // Alice is 45 degrees (NE)
+        let userAngle = 30;   // User is facing 30 degrees
+
+        function updateDirection() {
+            const directionText = document.getElementById('directionText');
+            const rssiFill = document.getElementById('rssiFill');
+            
+            // Simulate RSSI changes based on movement
+            const angleDiff = Math.abs(userAngle - targetAngle);
+            
+            if (angleDiff < 10) {
+                // Very close to correct direction
+                currentRSSI = Math.min(95, currentRSSI + 2);
+                directionText.textContent = "PERFECT! 🎯";
+                directionText.className = "direction-text perfect";
+                rssiFill.style.background = "linear-gradient(90deg, #00FF00, #00FF88)";
+            } else if (angleDiff < 30) {
+                // Getting warmer
+                currentRSSI = Math.min(85, currentRSSI + 1);
+                directionText.textContent = "WARMER! 🔥";
+                directionText.className = "direction-text warmer";
+                rssiFill.style.background = "linear-gradient(90deg, #FF6B6B, #FFD700)";
+            } else {
+                // Getting colder
+                currentRSSI = Math.max(30, currentRSSI - 1);
+                directionText.textContent = "COLDER! 🧊";
+                directionText.className = "direction-text colder";
+                rssiFill.style.background = "linear-gradient(90deg, #4ECDC4, #45B7D1)";
+            }
+            
+            rssiFill.style.width = currentRSSI + '%';
+        }
+
+        function updateCompass() {
+            const needle = document.getElementById('compassNeedle');
+            needle.style.transform = `translate(-50%, -100%) rotate(${userAngle}deg)`;
+        }
+
+        function simulateMovement() {
+            // Simulate user turning/walking
+            userAngle += (Math.random() - 0.5) * 10;
+            if (userAngle < 0) userAngle += 360;
+            if (userAngle >= 360) userAngle -= 360;
+            
+            updateCompass();
+            updateDirection();
+        }
+
+        function switchMode() {
+            alert('📊 Triangulation Mode:\n\n1. Walk 50m in any direction\n2. Take RSSI reading\n3. Walk 50m perpendicular\n4. Take another reading\n5. Calculate exact position');
+        }
+
+        function foundTarget() {
+            alert('🎯 Great! You found Alice!\n\nNow you can:\n• Send her a message\n• Navigate to another group member\n• Return to group chat');
+        }
+
+        // Simulate real-time updates
+        setInterval(simulateMovement, 2000);
+
+        // Initialize
+        updateCompass();
+        updateDirection();
+
+        // Handle device orientation changes (for phone compass)
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', function(event) {
+                if (event.alpha !== null) {
+                    userAngle = event.alpha;
+                    updateCompass();
+                    updateDirection();
+                }
+            });
+        }
+    </script>
+</body>
+</html>

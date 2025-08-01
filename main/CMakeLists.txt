@@ -1,0 +1,19 @@
+idf_component_register(
+    SRCS 
+        "main.c"
+        "radio/lora.c"
+        "radio/mesh.c"
+        "bluetooth/ble_server.c"
+        "bluetooth/gatt_srv.c"
+        "power/power_mgmt.c"
+        "storage/nvs_storage.c"
+        "wifi/wifi_ap.c"
+    INCLUDE_DIRS 
+        "."
+        "radio"
+        "bluetooth"
+        "power"
+        "storage"
+        "wifi"
+        "config"
+)

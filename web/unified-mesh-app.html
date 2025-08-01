@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh Network Chat & Positioning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        
+        .status {
+            font-size: 12px;
+            opacity: 0.9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            min-height: 60%;
+        }
+        
+        .positioning-section {
+            height: 40%;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+        
+        .section-header {
+            padding: 10px 15px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        /* Chat Styles */
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 16px;
+            max-width: 85%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            animation: messageSlide 0.3s ease-out;
+        }
+        
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.own {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.other {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .message-header {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+        
+        .message-text {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .chat-input {
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input input:focus {
+            border-color: #2196F3;
+        }
+        
+        .send-button {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Positioning Styles */
+        .positioning-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 180px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            position: relative;
+            background: linear-gradient(45deg, #e3f2fd, #f3e5f5);
+            overflow: hidden;
+        }
+        
+        .device-marker {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .device-marker.own {
+            background: #2196F3;
+            z-index: 10;
+        }
+        
+        .device-marker.other {
+            background: #FF5722;
+        }
+        
+        .device-marker.target {
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .positioning-info {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .info-content {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .device-list {
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .device-item:last-child {
+            border-bottom: none;
+        }
+        
+        .device-name {
+            font-weight: 500;
+            font-size: 12px;
+        }
+        
+        .device-rssi {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+            transition: width 0.5s ease;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .control-button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .control-button.primary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .control-button.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .control-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .connection-panel {
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .connect-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .connect-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .connect-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+        
+        .status-indicator.disconnected {
+            background: #f44336;
+        }
+        
+        .status-indicator.positioning {
+            background: #FF9800;
+            animation: pulse 1s infinite;
+        }
+        
+        /* Mobile specific adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            
+            .container {
+                border-radius: 0;
+                height: 100vh;
+            }
+            
+            .header {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 18px;
+                margin-bottom: 5px;
+            }
+            
+            .status {
+                font-size: 11px;
+                gap: 10px;
+            }
+            
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .chat-section {
+                min-height: 65%;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            
+            .positioning-section {
+                height: 35%;
+            }
+            
+            .map-container {
+                height: 120px;
+            }
+            
+            .device-marker {
+                width: 14px;
+                height: 14px;
+                font-size: 7px;
+            }
+            
+            .positioning-content {
+                padding: 8px;
+            }
+            
+            .device-list {
+                max-height: 80px;
+            }
+            
+            .message {
+                max-width: 90%;
+                padding: 8px 12px;
+            }
+            
+            .message-text {
+                font-size: 13px;
+            }
+            
+            .chat-input {
+                padding: 8px;
+            }
+            
+            .send-button {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 16px;
+            }
+            
+            .status {
+                font-size: 10px;
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .chat-section {
+                min-height: 70%;
+            }
+            
+            .positioning-section {
+                height: 30%;
+            }
+            
+            .map-container {
+                height: 100px;
+            }
+            
+            .device-marker {
+                width: 12px;
+                height: 12px;
+                font-size: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Mesh Network Hub</h1>
+            <div class="status">
+                <span class="status-indicator disconnected" id="connectionStatus"></span>
+                <span id="statusText">Disconnected</span>
+                <span id="deviceCount" style="margin-left: 20px;">📡 0 devices</span>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <div class="section-header">💬 Group Chat</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message other">
+                        <div class="message-header">System • Welcome</div>
+                        <div class="message-text">Welcome to the mesh network! Connect your device to start chatting and positioning.</div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="Type your message..." disabled>
+                    <button class="send-button" id="sendButton" disabled>Send</button>
+                </div>
+            </div>
+            
+            <!-- Positioning Section -->
+            <div class="positioning-section">
+                <div class="section-header">📍 Auto-Positioning</div>
+                <div class="positioning-content">
+                    <div class="map-container" id="mapContainer">
+                        <!-- Device markers will be added here -->
+                    </div>
+                    
+                    <div class="positioning-info">
+                        <div class="info-title">Position Confidence</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                        </div>
+                        <div class="info-content" id="confidenceText">Starting positioning system...</div>
+                    </div>
+                    
+                    <div class="positioning-info">
+                        <div class="info-title">📡 Nearby Devices</div>
+                        <div class="device-list" id="deviceList">
+                            <div style="text-align: center; color: #666; padding: 20px;">
+                                No devices detected
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="positioning-info">
+                        <div class="info-title">🧭 Compass</div>
+                        <div class="info-content" id="compassInfo">
+                            Heading: --°<br>
+                            Accuracy: --°
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button class="control-button secondary" id="resetButton" disabled>Reset Map</button>
+                        <button class="control-button primary" id="findButton" disabled>Find Devices</button>
+                    </div>
+                </div>
+                
+                <div class="connection-panel">
+                    <button class="connect-button" id="connectButton">Connect to Mesh Device</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class UnifiedMeshApp {
+            constructor() {
+                this.device = null;
+                this.characteristic = null;
+                this.isConnected = false;
+                this.ownDeviceId = null;
+                this.messages = [];
+                
+                // Positioning state
+                this.devices = new Map();
+                this.ownPosition = { x: 200, y: 125 }; // Center of map
+                this.positionConfidence = 0;
+                this.rssiHistory = new Map();
+                this.positioningActive = false;
+                this.compassHeading = 0;
+                this.compassAccuracy = 0;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.startPositioning();
+            }
+            
+            initializeElements() {
+                this.elements = {
+                    connectButton: document.getElementById('connectButton'),
+                    messageInput: document.getElementById('messageInput'),
+                    sendButton: document.getElementById('sendButton'),
+                    chatMessages: document.getElementById('chatMessages'),
+                    connectionStatus: document.getElementById('connectionStatus'),
+                    statusText: document.getElementById('statusText'),
+                    deviceCount: document.getElementById('deviceCount'),
+                    mapContainer: document.getElementById('mapContainer'),
+                    confidenceBar: document.getElementById('confidenceBar'),
+                    confidenceText: document.getElementById('confidenceText'),
+                    deviceList: document.getElementById('deviceList'),
+                    compassInfo: document.getElementById('compassInfo'),
+                    resetButton: document.getElementById('resetButton'),
+                    findButton: document.getElementById('findButton')
+                };
+            }
+            
+            setupEventListeners() {
+                this.elements.connectButton.addEventListener('click', () => this.connectToDevice());
+                this.elements.sendButton.addEventListener('click', () => this.sendMessage());
+                this.elements.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+                this.elements.resetButton.addEventListener('click', () => this.resetPositioning());
+                this.elements.findButton.addEventListener('click', () => this.findNearbyDevices());
+                
+                // Auto-resize map markers
+                window.addEventListener('resize', () => this.updateMapMarkers());
+            }
+            
+            async connectToDevice() {
+                try {
+                    this.updateStatus('Scanning for devices...', 'positioning');
+                    
+                    this.device = await navigator.bluetooth.requestDevice({
+                        filters: [{ services: ['12345678-1234-1234-1234-123456789abc'] }],
+                        optionalServices: ['12345678-1234-1234-1234-123456789abc']
+                    });
+                    
+                    this.updateStatus('Connecting...', 'positioning');
+                    const server = await this.device.gatt.connect();
+                    const service = await server.getPrimaryService('12345678-1234-1234-1234-123456789abc');
+                    this.characteristic = await service.getCharacteristic('87654321-4321-4321-4321-cba987654321');
+                    
+                    // Subscribe to notifications
+                    await this.characteristic.startNotifications();
+                    this.characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                        this.handleIncomingData(event);
+                    });
+                    
+                    this.isConnected = true;
+                    this.ownDeviceId = 'device_' + Math.random().toString(36).substr(2, 8);
+                    
+                    this.updateStatus('Connected', 'connected');
+                    this.enableChatInput();
+                    this.enablePositioningControls();
+                    
+                    this.addSystemMessage('Connected to mesh network!');
+                    
+                } catch (error) {
+                    console.error('Connection failed:', error);
+                    this.updateStatus('Connection failed', 'disconnected');
+                    this.addSystemMessage('Failed to connect: ' + error.message);
+                }
+            }
+            
+            handleIncomingData(event) {
+                const decoder = new TextDecoder();
+                const data = decoder.decode(event.target.value);
+                
+                try {
+                    const message = JSON.parse(data);
+                    
+                    if (message.type === 'chat') {
+                        this.handleChatMessage(message);
+                    } else if (message.type === 'positioning') {
+                        this.handlePositioningData(message);
+                    } else if (message.type === 'device_info') {
+                        this.handleDeviceInfo(message);
+                    }
+                } catch (error) {
+                    console.error('Failed to parse incoming data:', error);
+                }
+            }
+            
+            handleChatMessage(message) {
+                const isOwn = message.sender === this.ownDeviceId;
+                this.addChatMessage(message.text, message.sender, message.timestamp, isOwn);
+            }
+            
+            handlePositioningData(message) {
+                const deviceId = message.device_id;
+                const rssi = message.rssi;
+                
+                // Update device RSSI
+                if (!this.rssiHistory.has(deviceId)) {
+                    this.rssiHistory.set(deviceId, []);
+                }
+                
+                const history = this.rssiHistory.get(deviceId);
+                history.push({ rssi, timestamp: Date.now() });
+                
+                // Keep last 10 measurements
+                if (history.length > 10) {
+                    history.shift();
+                }
+                
+                // Update device position estimation
+                this.updateDevicePosition(deviceId, rssi);
+                this.updatePositionConfidence();
+                this.updateDeviceList();
+                this.updateMapMarkers();
+            }
+            
+            handleDeviceInfo(message) {
+                const deviceId = message.device_id;
+                this.devices.set(deviceId, {
+                    id: deviceId,
+                    name: message.name || `Device ${deviceId.slice(-4)}`,
+                    position: message.position || this.estimatePosition(deviceId),
+                    lastSeen: Date.now(),
+                    rssi: message.rssi || -70
+                });
+                
+                this.updateDeviceCount();
+                this.updateDeviceList();
+                this.updateMapMarkers();
+            }
+            
+            async sendMessage() {
+                const text = this.elements.messageInput.value.trim();
+                if (!text || !this.isConnected) return;
+                
+                const message = {
+                    type: 'chat',
+                    sender: this.ownDeviceId,
+                    text: text,
+                    timestamp: Date.now()
+                };
+                
+                try {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(JSON.stringify(message));
+                    await this.characteristic.writeValue(data);
+                    
+                    this.addChatMessage(text, this.ownDeviceId, message.timestamp, true);
+                    this.elements.messageInput.value = '';
+                    
+                } catch (error) {
+                    console.error('Failed to send message:', error);
+                    this.addSystemMessage('Failed to send message: ' + error.message);
+                }
+            }
+            
+            addChatMessage(text, sender, timestamp, isOwn) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
+                
+                const time = new Date(timestamp).toLocaleTimeString();
+                const senderName = isOwn ? 'You' : (sender === 'system' ? 'System' : `Device ${sender.slice(-4)}`);
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">${senderName} • ${time}</div>
+                    <div class="message-text">${text}</div>
+                `;
+                
+                this.elements.chatMessages.appendChild(messageDiv);
+                this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+            }
+            
+            addSystemMessage(text) {
+                this.addChatMessage(text, 'system', Date.now(), false);
+            }
+            
+            startPositioning() {
+                // Request device orientation for compass
+                if (window.DeviceOrientationEvent) {
+                    window.addEventListener('deviceorientation', (event) => {
+                        this.compassHeading = event.alpha || 0;
+                        this.compassAccuracy = event.webkitCompassAccuracy || 15;
+                        this.updateCompassInfo();
+                    });
+                }
+                
+                // Start auto-positioning simulation
+                this.positioningActive = true;
+                this.startAutoPositioning();
+            }
+            
+            startAutoPositioning() {
+                setInterval(() => {
+                    if (this.isConnected && this.positioningActive) {
+                        this.simulateRSSIMeasurements();
+                        this.improvePositionAccuracy();
+                    }
+                }, 2000); // Every 2 seconds
+            }
+            
+            simulateRSSIMeasurements() {
+                // Simulate discovering nearby devices
+                const nearbyDevices = [
+                    { id: 'device_abc123', name: 'Alice\'s Device', rssi: -45 + Math.random() * 10 },
+                    { id: 'device_def456', name: 'Bob\'s Device', rssi: -65 + Math.random() * 15 },
+                    { id: 'device_ghi789', name: 'Charlie\'s Device', rssi: -75 + Math.random() * 20 }
+                ];
+                
+                nearbyDevices.forEach(device => {
+                    if (Math.random() > 0.3) { // 70% chance to detect each device
+                        this.handlePositioningData({
+                            type: 'positioning',
+                            device_id: device.id,
+                            rssi: device.rssi
+                        });
+                        
+                        if (!this.devices.has(device.id)) {
+                            this.handleDeviceInfo({
+                                type: 'device_info',
+                                device_id: device.id,
+                                name: device.name,
+                                rssi: device.rssi
+                            });
+                        }
+                    }
+                });
+            }
+            
+            updateDevicePosition(deviceId, rssi) {
+                // Simple RSSI-based distance estimation
+                const distance = Math.pow(10, (-rssi - 40) / 20); // Rough formula
+                const angle = Math.random() * 2 * Math.PI; // Random angle for simulation
+                
+                const device = this.devices.get(deviceId) || {};
+                device.position = {
+                    x: this.ownPosition.x + distance * 50 * Math.cos(angle),
+                    y: this.ownPosition.y + distance * 50 * Math.sin(angle)
+                };
+                device.rssi = rssi;
+                device.lastSeen = Date.now();
+                
+                this.devices.set(deviceId, device);
+            }
+            
+            estimatePosition(deviceId) {
+                // Simple random position for new devices
+                return {
+                    x: 50 + Math.random() * 300,
+                    y: 50 + Math.random() * 150
+                };
+            }
+            
+            improvePositionAccuracy() {
+                // Simulate machine learning improvement
+                this.positionConfidence = Math.min(95, this.positionConfidence + 0.5);
+                this.updatePositionConfidence();
+            }
+            
+            updatePositionConfidence() {
+                this.elements.confidenceBar.style.width = this.positionConfidence + '%';
+                
+                let status = 'Initializing...';
+                if (this.positionConfidence < 30) {
+                    status = 'Low accuracy - collecting data';
+                } else if (this.positionConfidence < 60) {
+                    status = 'Medium accuracy - improving';
+                } else if (this.positionConfidence < 80) {
+                    status = 'Good accuracy';
+                } else {
+                    status = 'High accuracy - stable';
+                }
+                
+                this.elements.confidenceText.textContent = `${Math.round(this.positionConfidence)}% - ${status}`;
+            }
+            
+            updateDeviceList() {
+                const deviceArray = Array.from(this.devices.values());
+                
+                if (deviceArray.length === 0) {
+                    this.elements.deviceList.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            No devices detected
+                        </div>
+                    `;
+                    return;
+                }
+                
+                this.elements.deviceList.innerHTML = deviceArray.map(device => {
+                    const rssiColor = device.rssi > -50 ? '#4CAF50' : device.rssi > -70 ? '#FF9800' : '#f44336';
+                    return `
+                        <div class="device-item">
+                            <div class="device-name">${device.name}</div>
+                            <div class="device-rssi" style="color: ${rssiColor}">
+                                ${device.rssi}dBm
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            updateMapMarkers() {
+                const mapRect = this.elements.mapContainer.getBoundingClientRect();
+                const mapWidth = this.elements.mapContainer.offsetWidth;
+                const mapHeight = this.elements.mapContainer.offsetHeight;
+                
+                // Clear existing markers
+                this.elements.mapContainer.innerHTML = '';
+                
+                // Add own device marker
+                const ownMarker = document.createElement('div');
+                ownMarker.className = 'device-marker own';
+                ownMarker.textContent = '📱';
+                ownMarker.style.left = Math.min(mapWidth - 20, Math.max(0, this.ownPosition.x)) + 'px';
+                ownMarker.style.top = Math.min(mapHeight - 20, Math.max(0, this.ownPosition.y)) + 'px';
+                ownMarker.title = 'Your Device';
+                this.elements.mapContainer.appendChild(ownMarker);
+                
+                // Add other device markers
+                this.devices.forEach(device => {
+                    const marker = document.createElement('div');
+                    marker.className = 'device-marker other';
+                    marker.textContent = '📡';
+                    const x = Math.min(mapWidth - 20, Math.max(0, device.position.x));
+                    const y = Math.min(mapHeight - 20, Math.max(0, device.position.y));
+                    marker.style.left = x + 'px';
+                    marker.style.top = y + 'px';
+                    marker.title = `${device.name} (${device.rssi}dBm)`;
+                    this.elements.mapContainer.appendChild(marker);
+                });
+            }
+            
+            updateCompassInfo() {
+                this.elements.compassInfo.innerHTML = `
+                    Heading: ${Math.round(this.compassHeading)}°<br>
+                    Accuracy: ±${Math.round(this.compassAccuracy)}°
+                `;
+            }
+            
+            updateDeviceCount() {
+                const count = this.devices.size;
+                this.elements.deviceCount.textContent = `📡 ${count} device${count !== 1 ? 's' : ''}`;
+            }
+            
+            updateStatus(text, status) {
+                this.elements.statusText.textContent = text;
+                this.elements.connectionStatus.className = `status-indicator ${status}`;
+            }
+            
+            enableChatInput() {
+                this.elements.messageInput.disabled = false;
+                this.elements.sendButton.disabled = false;
+                this.elements.messageInput.focus();
+            }
+            
+            enablePositioningControls() {
+                this.elements.resetButton.disabled = false;
+                this.elements.findButton.disabled = false;
+            }
+            
+            resetPositioning() {
+                this.devices.clear();
+                this.rssiHistory.clear();
+                this.positionConfidence = 0;
+                
+                // Reset own position to center of current map
+                const mapWidth = this.elements.mapContainer.offsetWidth;
+                const mapHeight = this.elements.mapContainer.offsetHeight;
+                this.ownPosition = { x: mapWidth / 2, y: mapHeight / 2 };
+                
+                this.updateDeviceList();
+                this.updateMapMarkers();
+                this.updatePositionConfidence();
+                this.updateDeviceCount();
+                
+                this.addSystemMessage('Positioning system reset');
+            }
+            
+            async findNearbyDevices() {
+                if (!this.isConnected) return;
+                
+                this.addSystemMessage('Scanning for nearby devices...');
+                
+                // Send discovery request
+                try {
+                    const message = {
+                        type: 'discovery',
+                        sender: this.ownDeviceId,
+                        timestamp: Date.now()
+                    };
+                    
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(JSON.stringify(message));
+                    await this.characteristic.writeValue(data);
+                    
+                } catch (error) {
+                    console.error('Failed to send discovery request:', error);
+                    this.addSystemMessage('Failed to scan for devices');
+                }
+            }
+        }
+        
+        // Initialize the app when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new UnifiedMeshApp();
+        });
+    </script>
+</body>
+</html>

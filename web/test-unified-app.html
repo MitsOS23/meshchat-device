@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Mesh App Test</title>
+    <!-- Add Leaflet CSS and JS for real maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0;
+            box-shadow: none;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        
+        .status {
+            font-size: 12px;
+            opacity: 0.9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid #e0e0e0;
+            min-height: 60%;
+        }
+        
+        .positioning-section {
+            height: 40%;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+        
+        .section-header {
+            padding: 10px 15px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        /* Chat Styles */
+        .chat-messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            background: #fafafa;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 16px;
+            max-width: 85%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            animation: messageSlide 0.3s ease-out;
+        }
+        
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.own {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.other {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .message.system {
+            background: #e8f5e8;
+            color: #2e7d2e;
+            border: 1px solid #c8e6c8;
+            margin: 0 auto;
+            text-align: center;
+            max-width: 70%;
+        }
+        
+        .message-header {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+        
+        .message-text {
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .chat-input {
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input input:focus {
+            border-color: #2196F3;
+        }
+        
+        .send-button {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Positioning Styles */
+        .positioning-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 180px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            position: relative;
+            background: #f0f0f0;
+            overflow: hidden;
+        }
+        
+        /* Leaflet map styles */
+        .leaflet-container {
+            height: 100%;
+            width: 100%;
+            border-radius: 6px;
+        }
+        
+        .device-marker {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .device-marker.own {
+            background: #2196F3;
+            z-index: 10;
+        }
+        
+        .device-marker.other {
+            background: #FF5722;
+        }
+        
+        .device-marker.target {
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .positioning-info {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .info-content {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .device-list {
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .device-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .device-item:last-child {
+            border-bottom: none;
+        }
+        
+        .device-name {
+            font-weight: 500;
+            font-size: 12px;
+        }
+        
+        .device-rssi {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+            transition: width 0.5s ease;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .control-button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .control-button.primary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .control-button.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .control-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .connection-panel {
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .connect-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .connect-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+        
+        .connect-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .connect-button.disconnect {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+        
+        .status-indicator.disconnected {
+            background: #f44336;
+        }
+        
+        .status-indicator.positioning {
+            background: #FF9800;
+            animation: pulse 1s infinite;
+        }
+        
+        /* Test Controls */
+        .test-controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .test-controls button {
+            display: block;
+            width: 100%;
+            margin: 5px 0;
+            padding: 5px 10px;
+            background: #666;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .test-controls button:hover {
+            background: #888;
+        }
+        
+        .test-controls h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .test-controls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Mesh Network Hub (TEST)</h1>
+            <div class="status">
+                <span class="status-indicator disconnected" id="connectionStatus"></span>
+                <span id="statusText">Disconnected</span>
+                <span id="deviceCount" style="margin-left: 20px;">📡 0 devices</span>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Chat Section -->
+            <div class="chat-section">
+                <div class="section-header">💬 Group Chat</div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message system">
+                        <div class="message-header">Test Mode • System</div>
+                        <div class="message-text">TEST MODE: Click "Connect" to simulate mesh device connection</div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="messageInput" placeholder="Type your message..." disabled>
+                    <button class="send-button" id="sendButton" disabled>Send</button>
+                </div>
+            </div>
+            
+            <!-- Positioning Section -->
+            <div class="positioning-section">
+                <div class="section-header">📍 Auto-Positioning</div>
+                <div class="positioning-content">
+                    <div class="map-container" id="mapContainer">
+                        <!-- Device markers will be added here -->
+                    </div>
+                    
+                    <div class="positioning-info">
+                        <div class="info-title">Position Confidence</div>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                        </div>
+                        <div class="info-content" id="confidenceText">Starting positioning system...</div>
+                    </div>
+                    
+                    <div class="positioning-info">
+                        <div class="info-title">📡 Nearby Devices</div>
+                        <div class="device-list" id="deviceList">
+                            <div style="text-align: center; color: #666; padding: 20px;">
+                                No devices detected
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="positioning-info">
+                        <div class="info-title">🧭 Compass</div>
+                        <div class="info-content" id="compassInfo">
+                            Heading: --°<br>
+                            Accuracy: --°
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <button class="control-button secondary" id="resetButton" disabled>Reset Map</button>
+                        <button class="control-button primary" id="findButton" disabled>Find Devices</button>
+                    </div>
+                </div>
+                
+                <div class="connection-panel">
+                    <button class="connect-button" id="connectButton">Connect to Mesh Device (TEST)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Controls (Desktop Only) -->
+    <div class="test-controls">
+        <h3>Test Controls</h3>
+        <button onclick="testApp.simulateIncomingMessage()">📩 Incoming Message</button>
+        <button onclick="testApp.simulateNewDevice()">📡 New Device Joins</button>
+        <button onclick="testApp.simulateMovement()">🚶 Simulate Movement</button>
+        <button onclick="testApp.simulateDisconnection()">❌ Device Leaves</button>
+        <button onclick="testApp.togglePositioning()">📍 Toggle Positioning</button>
+        <button onclick="testApp.simulateEmergency()">🚨 Emergency Test</button>
+        <button onclick="testApp.resetAll()">🔄 Reset All</button>
+    </div>
+
+    <script>
+        class TestUnifiedMeshApp {
+            constructor() {
+                this.isConnected = false;
+                this.ownDeviceId = 'test_device_' + Math.random().toString(36).substr(2, 8);
+                this.messages = [];
+                
+                // Cambridge, UK coordinates
+                this.baseLocation = {
+                    lat: 52.2053,
+                    lng: 0.1218
+                };
+                
+                // Positioning state
+                this.devices = new Map();
+                this.ownPosition = this.baseLocation; // Use GPS coordinates
+                this.positionConfidence = 0;
+                this.rssiHistory = new Map();
+                this.positioningActive = false;
+                this.compassHeading = 0;
+                this.compassAccuracy = 15;
+                this.map = null; // Leaflet map instance
+                this.markers = new Map(); // Store device markers
+                
+                // Test data with GPS coordinates around Cambridge
+                this.testDevices = [
+                    { 
+                        id: 'alice_device', 
+                        name: 'Alice\'s Device', 
+                        initialRssi: -45,
+                        position: { lat: 52.2063, lng: 0.1228 } // ~100m north
+                    },
+                    { 
+                        id: 'bob_device', 
+                        name: 'Bob\'s Device', 
+                        initialRssi: -65,
+                        position: { lat: 52.2043, lng: 0.1208 } // ~200m south
+                    },
+                    { 
+                        id: 'charlie_device', 
+                        name: 'Charlie\'s Device', 
+                        initialRssi: -75,
+                        position: { lat: 52.2073, lng: 0.1238 } // ~300m northeast
+                    },
+                    { 
+                        id: 'diana_device', 
+                        name: 'Diana\'s Device', 
+                        initialRssi: -55,
+                        position: { lat: 52.2033, lng: 0.1198 } // ~250m southwest
+                    }
+                ];
+                
+                this.testMessages = [
+                    "Hey everyone! Just joined the network 👋",
+                    "Anyone know where the meeting point is?",
+                    "I can see the landmark from here",
+                    "Signal strength is really good today",
+                    "Let's test the emergency beacon",
+                    "Moving to higher ground for better coverage",
+                    "This mesh network is awesome! 🚀",
+                    "Battery at 85%, solar panel working great",
+                    "Can everyone see my position on the map?",
+                    "Range test - can you receive this?"
+                ];
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.initializeMap();
+                this.startSimulation();
+            }
+            
+            initializeMap() {
+                // Initialize Leaflet map centered on Cambridge
+                this.map = L.map('mapContainer').setView([this.baseLocation.lat, this.baseLocation.lng], 16);
+                
+                // Add OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 19
+                }).addTo(this.map);
+                
+                // Add own position marker
+                this.ownMarker = L.marker([this.baseLocation.lat, this.baseLocation.lng], {
+                    icon: L.divIcon({
+                        className: 'own-device-marker',
+                        html: '📱',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    })
+                }).addTo(this.map);
+                
+                this.ownMarker.bindPopup('Your Device<br>Cambridge, UK').openPopup();
+                
+                // Style for own device marker
+                const style = document.createElement('style');
+                style.textContent = `
+                    .own-device-marker {
+                        background: #2196F3;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                    }
+                    .other-device-marker {
+                        background: #FF5722;
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            initializeElements() {
+                this.elements = {
+                    connectButton: document.getElementById('connectButton'),
+                    messageInput: document.getElementById('messageInput'),
+                    sendButton: document.getElementById('sendButton'),
+                    chatMessages: document.getElementById('chatMessages'),
+                    connectionStatus: document.getElementById('connectionStatus'),
+                    statusText: document.getElementById('statusText'),
+                    deviceCount: document.getElementById('deviceCount'),
+                    mapContainer: document.getElementById('mapContainer'),
+                    confidenceBar: document.getElementById('confidenceBar'),
+                    confidenceText: document.getElementById('confidenceText'),
+                    deviceList: document.getElementById('deviceList'),
+                    compassInfo: document.getElementById('compassInfo'),
+                    resetButton: document.getElementById('resetButton'),
+                    findButton: document.getElementById('findButton')
+                };
+            }
+            
+            setupEventListeners() {
+                this.elements.connectButton.addEventListener('click', () => this.toggleConnection());
+                this.elements.sendButton.addEventListener('click', () => this.sendMessage());
+                this.elements.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+                this.elements.resetButton.addEventListener('click', () => this.resetPositioning());
+                this.elements.findButton.addEventListener('click', () => this.findNearbyDevices());
+                
+                // Map marker click handlers
+                this.elements.mapContainer.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('device-marker') && !e.target.classList.contains('own')) {
+                        this.handleMarkerClick(e.target);
+                    }
+                });
+                
+                // Device list click handlers
+                this.elements.deviceList.addEventListener('click', (e) => {
+                    const deviceItem = e.target.closest('.device-item');
+                    if (deviceItem) {
+                        const deviceName = deviceItem.querySelector('.device-name').textContent;
+                        this.focusOnDevice(deviceName);
+                    }
+                });
+            }
+            
+            startSimulation() {
+                // Simulate compass readings
+                setInterval(() => {
+                    this.compassHeading = (this.compassHeading + 1 + Math.random() * 2) % 360;
+                    this.compassAccuracy = 10 + Math.random() * 10;
+                    this.updateCompassInfo();
+                }, 2000);
+                
+                this.addSystemMessage('Test mode ready. Click "Connect" to start simulation.');
+            }
+            
+            toggleConnection() {
+                if (!this.isConnected) {
+                    this.connect();
+                } else {
+                    this.disconnect();
+                }
+            }
+            
+            connect() {
+                this.updateStatus('Connecting to test device...', 'positioning');
+                
+                setTimeout(() => {
+                    this.isConnected = true;
+                    this.updateStatus('Connected (TEST)', 'connected');
+                    this.enableChatInput();
+                    this.enablePositioningControls();
+                    this.elements.connectButton.textContent = 'Disconnect (TEST)';
+                    this.elements.connectButton.classList.add('disconnect');
+                    
+                    this.addSystemMessage('Connected to test mesh device!');
+                    this.startAutoPositioning();
+                    
+                    // Add initial test devices
+                    setTimeout(() => this.addInitialTestDevices(), 2000);
+                }, 1500);
+            }
+            
+            disconnect() {
+                this.isConnected = false;
+                this.positioningActive = false;
+                this.updateStatus('Disconnected', 'disconnected');
+                this.disableChatInput();
+                this.disablePositioningControls();
+                this.elements.connectButton.textContent = 'Connect to Mesh Device (TEST)';
+                this.elements.connectButton.classList.remove('disconnect');
+                
+                this.devices.clear();
+                this.updateDeviceList();
+                this.updateMapMarkers();
+                this.updateDeviceCount();
+                this.positionConfidence = 0;
+                this.updatePositionConfidence();
+                
+                this.addSystemMessage('Disconnected from mesh network');
+            }
+            
+            addInitialTestDevices() {
+                this.testDevices.slice(0, 2).forEach((device, index) => {
+                    setTimeout(() => {
+                        this.simulateDeviceJoin(device);
+                        this.addSystemMessage(`${device.name} joined the network`);
+                    }, index * 1000);
+                });
+            }
+            
+            simulateDeviceJoin(deviceData) {
+                const device = {
+                    id: deviceData.id,
+                    name: deviceData.name,
+                    position: deviceData.position,
+                    lastSeen: Date.now(),
+                    rssi: deviceData.initialRssi + (Math.random() * 10 - 5)
+                };
+                
+                this.devices.set(device.id, device);
+                this.updateDeviceList();
+                this.updateMapMarkers();
+                this.updateDeviceCount();
+                
+                // Initialize RSSI history
+                if (!this.rssiHistory.has(device.id)) {
+                    this.rssiHistory.set(device.id, []);
+                }
+            }
+            
+            generateRandomPosition() {
+                // Generate random position within ~500m of Cambridge center
+                const latOffset = (Math.random() - 0.5) * 0.01; // ~500m
+                const lngOffset = (Math.random() - 0.5) * 0.01; // ~500m
+                
+                return {
+                    lat: this.baseLocation.lat + latOffset,
+                    lng: this.baseLocation.lng + lngOffset
+                };
+            }
+            
+            startAutoPositioning() {
+                if (this.positioningActive) return;
+                
+                this.positioningActive = true;
+                
+                // Simulate auto-positioning updates
+                const updateInterval = setInterval(() => {
+                    if (!this.isConnected || !this.positioningActive) {
+                        clearInterval(updateInterval);
+                        return;
+                    }
+                    
+                    this.simulateRSSIMeasurements();
+                    this.improvePositionAccuracy();
+                }, 3000);
+            }
+            
+            simulateRSSIMeasurements() {
+                this.devices.forEach((device, deviceId) => {
+                    // Simulate RSSI variations
+                    const baseRssi = device.rssi;
+                    const newRssi = baseRssi + (Math.random() * 6 - 3); // ±3dB variation
+                    
+                    device.rssi = newRssi;
+                    device.lastSeen = Date.now();
+                    
+                    // Update RSSI history
+                    const history = this.rssiHistory.get(deviceId) || [];
+                    history.push({ rssi: newRssi, timestamp: Date.now() });
+                    
+                    if (history.length > 10) {
+                        history.shift();
+                    }
+                    
+                    this.rssiHistory.set(deviceId, history);
+                    
+                    // Slightly move device position (simulate natural movement)
+                    const latOffset = (Math.random() - 0.5) * 0.0001; // ~10m
+                    const lngOffset = (Math.random() - 0.5) * 0.0001; // ~10m
+                    device.position.lat += latOffset;
+                    device.position.lng += lngOffset;
+                });
+                
+                this.updateDeviceList();
+                this.updateMapMarkers();
+            }
+            
+            improvePositionAccuracy() {
+                this.positionConfidence = Math.min(95, this.positionConfidence + 1.5);
+                this.updatePositionConfidence();
+            }
+            
+            sendMessage() {
+                const text = this.elements.messageInput.value.trim();
+                if (!text || !this.isConnected) return;
+                
+                this.addChatMessage(text, this.ownDeviceId, Date.now(), true);
+                this.elements.messageInput.value = '';
+                
+                // Simulate message being received by others
+                setTimeout(() => {
+                    this.addSystemMessage(`Message sent to ${this.devices.size} device${this.devices.size !== 1 ? 's' : ''}`);
+                }, 500);
+            }
+            
+            addChatMessage(text, sender, timestamp, isOwn) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isOwn ? 'own' : (sender === 'system' ? 'system' : 'other')}`;
+                
+                const time = new Date(timestamp).toLocaleTimeString();
+                let senderName = 'Unknown';
+                
+                if (isOwn) {
+                    senderName = 'You';
+                } else if (sender === 'system') {
+                    senderName = 'System';
+                } else {
+                    const device = Array.from(this.devices.values()).find(d => d.id === sender);
+                    senderName = device ? device.name : `Device ${sender.slice(-4)}`;
+                }
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">${senderName} • ${time}</div>
+                    <div class="message-text">${text}</div>
+                `;
+                
+                this.elements.chatMessages.appendChild(messageDiv);
+                this.elements.chatMessages.scrollTop = this.elements.chatMessages.scrollHeight;
+            }
+            
+            addSystemMessage(text) {
+                this.addChatMessage(text, 'system', Date.now(), false);
+            }
+            
+            updateMapMarkers() {
+                // Clear existing device markers (but keep own marker)
+                this.markers.forEach(marker => {
+                    this.map.removeLayer(marker);
+                });
+                this.markers.clear();
+                
+                // Add device markers
+                this.devices.forEach(device => {
+                    const marker = L.marker([device.position.lat, device.position.lng], {
+                        icon: L.divIcon({
+                            className: 'other-device-marker',
+                            html: '�',
+                            iconSize: [20, 20],
+                            iconAnchor: [10, 10]
+                        })
+                    }).addTo(this.map);
+                    
+                    // Calculate distance from own position
+                    const distance = this.calculateDistance(
+                        this.ownPosition.lat, this.ownPosition.lng,
+                        device.position.lat, device.position.lng
+                    );
+                    
+                    marker.bindPopup(`
+                        <b>${device.name}</b><br>
+                        Distance: ${Math.round(distance)}m<br>
+                        Signal: ${device.rssi.toFixed(1)}dBm<br>
+                        Last seen: ${new Date(device.lastSeen).toLocaleTimeString()}
+                    `);
+                    
+                    this.markers.set(device.id, marker);
+                    
+                    // Add click handler
+                    marker.on('click', () => {
+                        this.focusOnDevice(device.name);
+                    });
+                });
+            }
+            
+            calculateDistance(lat1, lon1, lat2, lon2) {
+                // Haversine formula for distance calculation
+                const R = 6371e3; // Earth's radius in meters
+                const φ1 = lat1 * Math.PI/180;
+                const φ2 = lat2 * Math.PI/180;
+                const Δφ = (lat2-lat1) * Math.PI/180;
+                const Δλ = (lon2-lon1) * Math.PI/180;
+
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                          Math.cos(φ1) * Math.cos(φ2) *
+                          Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+                return R * c; // Distance in meters
+            }
+            
+            updateDeviceList() {
+                const deviceArray = Array.from(this.devices.values());
+                
+                if (deviceArray.length === 0) {
+                    this.elements.deviceList.innerHTML = `
+                        <div style="text-align: center; color: #666; padding: 20px;">
+                            No devices detected
+                        </div>
+                    `;
+                    return;
+                }
+                
+                this.elements.deviceList.innerHTML = deviceArray.map(device => {
+                    const rssiColor = device.rssi > -50 ? '#4CAF50' : device.rssi > -70 ? '#FF9800' : '#f44336';
+                    return `
+                        <div class="device-item" data-device-id="${device.id}">
+                            <div class="device-name">${device.name}</div>
+                            <div class="device-rssi" style="color: ${rssiColor}">
+                                ${device.rssi.toFixed(1)}dBm
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            updatePositionConfidence() {
+                this.elements.confidenceBar.style.width = this.positionConfidence + '%';
+                
+                let status = 'Initializing...';
+                if (this.positionConfidence < 30) {
+                    status = 'Low accuracy - collecting data';
+                } else if (this.positionConfidence < 60) {
+                    status = 'Medium accuracy - improving';
+                } else if (this.positionConfidence < 80) {
+                    status = 'Good accuracy';
+                } else {
+                    status = 'High accuracy - stable';
+                }
+                
+                this.elements.confidenceText.textContent = `${Math.round(this.positionConfidence)}% - ${status}`;
+            }
+            
+            updateCompassInfo() {
+                this.elements.compassInfo.innerHTML = `
+                    Heading: ${Math.round(this.compassHeading)}°<br>
+                    Accuracy: ±${Math.round(this.compassAccuracy)}°
+                `;
+            }
+            
+            updateDeviceCount() {
+                const count = this.devices.size;
+                this.elements.deviceCount.textContent = `📡 ${count} device${count !== 1 ? 's' : ''}`;
+            }
+            
+            updateStatus(text, status) {
+                this.elements.statusText.textContent = text;
+                this.elements.connectionStatus.className = `status-indicator ${status}`;
+            }
+            
+            enableChatInput() {
+                this.elements.messageInput.disabled = false;
+                this.elements.sendButton.disabled = false;
+                this.elements.messageInput.focus();
+            }
+            
+            disableChatInput() {
+                this.elements.messageInput.disabled = true;
+                this.elements.sendButton.disabled = true;
+            }
+            
+            enablePositioningControls() {
+                this.elements.resetButton.disabled = false;
+                this.elements.findButton.disabled = false;
+            }
+            
+            disablePositioningControls() {
+                this.elements.resetButton.disabled = true;
+                this.elements.findButton.disabled = true;
+            }
+            
+            resetPositioning() {
+                this.devices.clear();
+                this.rssiHistory.clear();
+                this.positionConfidence = 0;
+                
+                // Reset own position to Cambridge center
+                this.ownPosition = { ...this.baseLocation };
+                this.ownMarker.setLatLng([this.ownPosition.lat, this.ownPosition.lng]);
+                
+                this.updateDeviceList();
+                this.updateMapMarkers();
+                this.updatePositionConfidence();
+                this.updateDeviceCount();
+                
+                this.addSystemMessage('Positioning system reset');
+            }
+            
+            findNearbyDevices() {
+                if (!this.isConnected) return;
+                
+                this.addSystemMessage('Scanning for nearby devices...');
+                
+                // Simulate finding new devices
+                setTimeout(() => {
+                    const availableDevices = this.testDevices.filter(td => 
+                        !Array.from(this.devices.keys()).includes(td.id)
+                    );
+                    
+                    if (availableDevices.length > 0) {
+                        const newDevice = availableDevices[Math.floor(Math.random() * availableDevices.length)];
+                        this.simulateDeviceJoin(newDevice);
+                        this.addSystemMessage(`Found: ${newDevice.name}`);
+                    } else {
+                        this.addSystemMessage('No new devices found');
+                    }
+                }, 1500);
+            }
+            
+            handleMarkerClick(marker) {
+                const deviceId = marker.dataset.deviceId;
+                const device = this.devices.get(deviceId);
+                if (device) {
+                    this.focusOnDevice(device.name);
+                }
+            }
+            
+            focusOnDevice(deviceName) {
+                const device = Array.from(this.devices.values()).find(d => d.name === deviceName);
+                if (device) {
+                    // Pan map to device location
+                    this.map.setView([device.position.lat, device.position.lng], 17);
+                    
+                    // Open device popup
+                    const marker = this.markers.get(device.id);
+                    if (marker) {
+                        marker.openPopup();
+                    }
+                    
+                    // Calculate distance
+                    const distance = this.calculateDistance(
+                        this.ownPosition.lat, this.ownPosition.lng,
+                        device.position.lat, device.position.lng
+                    );
+                    
+                    this.addSystemMessage(`Focusing on ${deviceName} - ${Math.round(distance)}m away`);
+                    
+                    // Pan back to overview after 3 seconds
+                    setTimeout(() => {
+                        this.map.setView([this.baseLocation.lat, this.baseLocation.lng], 16);
+                    }, 3000);
+                }
+            }
+            
+            // Test functions for desktop controls
+            simulateIncomingMessage() {
+                if (!this.isConnected || this.devices.size === 0) return;
+                
+                const deviceArray = Array.from(this.devices.values());
+                const randomDevice = deviceArray[Math.floor(Math.random() * deviceArray.length)];
+                const randomMessage = this.testMessages[Math.floor(Math.random() * this.testMessages.length)];
+                
+                this.addChatMessage(randomMessage, randomDevice.id, Date.now(), false);
+            }
+            
+            simulateNewDevice() {
+                if (!this.isConnected) return;
+                
+                const availableDevices = this.testDevices.filter(td => 
+                    !Array.from(this.devices.keys()).includes(td.id)
+                );
+                
+                if (availableDevices.length > 0) {
+                    const newDevice = availableDevices[0];
+                    this.simulateDeviceJoin(newDevice);
+                    this.addSystemMessage(`${newDevice.name} joined the network`);
+                }
+            }
+            
+            simulateMovement() {
+                if (!this.isConnected) return;
+                
+                this.devices.forEach(device => {
+                    // Move devices by ~50m in random direction
+                    const latOffset = (Math.random() - 0.5) * 0.001; // ~50m
+                    const lngOffset = (Math.random() - 0.5) * 0.001; // ~50m
+                    device.position.lat += latOffset;
+                    device.position.lng += lngOffset;
+                    device.rssi += (Math.random() - 0.5) * 5;
+                });
+                
+                this.updateMapMarkers();
+                this.updateDeviceList();
+                this.addSystemMessage('Simulated device movement');
+            }
+            
+            simulateDisconnection() {
+                if (!this.isConnected || this.devices.size === 0) return;
+                
+                const deviceArray = Array.from(this.devices.values());
+                const deviceToRemove = deviceArray[Math.floor(Math.random() * deviceArray.length)];
+                
+                this.devices.delete(deviceToRemove.id);
+                this.rssiHistory.delete(deviceToRemove.id);
+                
+                this.updateDeviceList();
+                this.updateMapMarkers();
+                this.updateDeviceCount();
+                
+                this.addSystemMessage(`${deviceToRemove.name} left the network`);
+            }
+            
+            togglePositioning() {
+                this.positioningActive = !this.positioningActive;
+                const status = this.positioningActive ? 'enabled' : 'disabled';
+                this.addSystemMessage(`Auto-positioning ${status}`);
+                
+                if (this.positioningActive && this.isConnected) {
+                    this.startAutoPositioning();
+                }
+            }
+            
+            simulateEmergency() {
+                if (!this.isConnected) return;
+                
+                this.addChatMessage('🚨 EMERGENCY: This is a test emergency broadcast', 'system', Date.now(), false);
+                
+                // Simulate emergency positioning boost
+                this.positionConfidence = Math.min(100, this.positionConfidence + 20);
+                this.updatePositionConfidence();
+            }
+            
+            resetAll() {
+                if (this.isConnected) {
+                    this.disconnect();
+                }
+                
+                setTimeout(() => {
+                    this.elements.chatMessages.innerHTML = `
+                        <div class="message system">
+                            <div class="message-header">Test Mode • System</div>
+                            <div class="message-text">TEST MODE: Click "Connect" to simulate mesh device connection</div>
+                        </div>
+                    `;
+                    this.addSystemMessage('Test environment reset');
+                }, 1000);
+            }
+        }
+        
+        // Initialize the test app when page loads
+        let testApp;
+        document.addEventListener('DOMContentLoaded', () => {
+            testApp = new TestUnifiedMeshApp();
+        });
+    </script>
+</body>
+</html>

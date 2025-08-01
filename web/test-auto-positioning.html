@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeshChat Auto-Positioning System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: 0 auto;
+            background: #2a2a2a;
+        }
+
+        .header {
+            background: #007AFF;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .status-bar {
+            background: #333;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .auto-status {
+            color: #00FF00;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: #00FF00;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .content {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .live-map {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #333;
+            position: relative;
+            height: 250px;
+        }
+
+        .map-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .center-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            background: #FFD700;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #fff;
+            z-index: 10;
+        }
+
+        .device-marker {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            transform: translate(-50%, -50%);
+            transition: all 0.5s;
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .device-marker:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        .device-alice {
+            background: #FF6B6B;
+            top: 25%;
+            left: 75%;
+            animation: moveAlice 8s infinite;
+        }
+
+        .device-bob {
+            background: #4ECDC4;
+            top: 75%;
+            left: 25%;
+            animation: moveBob 10s infinite;
+        }
+
+        .device-dave {
+            background: #96CEB4;
+            top: 35%;
+            left: 35%;
+            animation: moveDave 6s infinite;
+        }
+
+        @keyframes moveAlice {
+            0%, 100% { top: 25%; left: 75%; }
+            50% { top: 20%; left: 80%; }
+        }
+
+        @keyframes moveBob {
+            0%, 100% { top: 75%; left: 25%; }
+            50% { top: 80%; left: 20%; }
+        }
+
+        @keyframes moveDave {
+            0%, 100% { top: 35%; left: 35%; }
+            50% { top: 40%; left: 30%; }
+        }
+
+        .compass-directions {
+            position: absolute;
+            font-size: 12px;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .north { top: 5px; left: 50%; transform: translateX(-50%); }
+        .south { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .east { right: 5px; top: 50%; transform: translateY(-50%); }
+        .west { left: 5px; top: 50%; transform: translateY(-50%); }
+
+        .device-list {
+            background: #333;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .device-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .device-item:hover {
+            background: #404040;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .device-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .device-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .device-name {
+            font-weight: bold;
+        }
+
+        .device-status {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .position-data {
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .distance {
+            color: #00FF88;
+            font-weight: bold;
+        }
+
+        .direction-arrow {
+            color: #FFD700;
+            font-size: 16px;
+        }
+
+        .confidence {
+            font-size: 10px;
+            color: #888;
+        }
+
+        .auto-features {
+            background: #333;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .feature-icon {
+            width: 20px;
+            text-align: center;
+        }
+
+        .rssi-graph {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rssi-line {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 60px;
+            background: linear-gradient(to right, #FF6B6B, #FFD700, #00FF88);
+            opacity: 0.3;
+            border-radius: 4px;
+        }
+
+        .rssi-label {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .learning-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #00FF88;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 4px;
+            background: #555;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00FF88, #00FFFF);
+            border-radius: 2px;
+            animation: progress 3s infinite;
+        }
+
+        @keyframes progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            📍 Auto-Positioning System
+        </div>
+
+        <div class="status-bar">
+            <div class="auto-status">
+                <div class="pulse"></div>
+                Auto-tracking active
+            </div>
+            <div style="color: #888;">
+                Last update: <span id="lastUpdate">2s ago</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="live-map">
+                <div class="map-grid"></div>
+                <div class="compass-directions north">N</div>
+                <div class="compass-directions south">S</div>
+                <div class="compass-directions east">E</div>
+                <div class="compass-directions west">W</div>
+                
+                <div class="center-marker" title="You are here"></div>
+                <div class="device-marker device-alice" title="Alice - Auto-tracked">A</div>
+                <div class="device-marker device-bob" title="Bob - Auto-tracked">B</div>
+                <div class="device-marker device-dave" title="Dave - Auto-tracked">D</div>
+            </div>
+
+            <div class="device-list">
+                <h4 style="margin-bottom: 15px; color: #FFD700;">📡 Live Device Positions</h4>
+                
+                <div class="device-item">
+                    <div class="device-info">
+                        <div class="device-avatar" style="background: #FF6B6B;">A</div>
+                        <div class="device-details">
+                            <div class="device-name">Alice</div>
+                            <div class="device-status">Moving slowly</div>
+                        </div>
+                    </div>
+                    <div class="position-data">
+                        <div class="distance">142m <span class="direction-arrow">↗</span></div>
+                        <div class="confidence">95% confident</div>
+                    </div>
+                </div>
+
+                <div class="device-item">
+                    <div class="device-info">
+                        <div class="device-avatar" style="background: #4ECDC4;">B</div>
+                        <div class="device-details">
+                            <div class="device-name">Bob</div>
+                            <div class="device-status">Stationary</div>
+                        </div>
+                    </div>
+                    <div class="position-data">
+                        <div class="distance">287m <span class="direction-arrow">↙</span></div>
+                        <div class="confidence">88% confident</div>
+                    </div>
+                </div>
+
+                <div class="device-item">
+                    <div class="device-info">
+                        <div class="device-avatar" style="background: #96CEB4;">D</div>
+                        <div class="device-details">
+                            <div class="device-name">Dave</div>
+                            <div class="device-status">Walking toward you</div>
+                        </div>
+                    </div>
+                    <div class="position-data">
+                        <div class="distance">73m <span class="direction-arrow">↖</span></div>
+                        <div class="confidence">92% confident</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auto-features">
+                <h4 style="margin-bottom: 15px; color: #FFD700;">🤖 Automated Features</h4>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">📊</div>
+                    <div>RSSI measurements every 10 seconds</div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">🚶</div>
+                    <div>Movement detection and tracking</div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">📐</div>
+                    <div>Auto-triangulation (no manual steps)</div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">🧠</div>
+                    <div>Machine learning position improvement</div>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-icon">🔄</div>
+                    <div>Real-time position updates</div>
+                </div>
+
+                <div class="rssi-graph">
+                    <div class="rssi-label">RSSI History (Auto-collected)</div>
+                    <div class="rssi-line"></div>
+                </div>
+
+                <div class="learning-indicator">
+                    <span>🧠 Learning accuracy:</span>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 78%;"></div>
+                    </div>
+                    <span>78%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let updateCounter = 0;
+
+        function updatePositions() {
+            // Simulate automatic position updates
+            const devices = document.querySelectorAll('.device-item');
+            const distances = [
+                { name: 'Alice', distance: 142 + Math.sin(updateCounter * 0.1) * 10, direction: '↗', confidence: 95 },
+                { name: 'Bob', distance: 287 + Math.cos(updateCounter * 0.05) * 5, direction: '↙', confidence: 88 },
+                { name: 'Dave', distance: Math.max(50, 73 - updateCounter * 0.5), direction: '↖', confidence: 92 }
+            ];
+
+            devices.forEach((device, index) => {
+                const distanceEl = device.querySelector('.distance');
+                const confidenceEl = device.querySelector('.confidence');
+                const statusEl = device.querySelector('.device-status');
+                
+                const data = distances[index];
+                distanceEl.textContent = `${Math.round(data.distance)}m ${data.direction}`;
+                confidenceEl.textContent = `${data.confidence}% confident`;
+                
+                // Update status based on movement
+                if (data.name === 'Dave' && data.distance < 60) {
+                    statusEl.textContent = 'Very close!';
+                    statusEl.style.color = '#00FF00';
+                } else if (data.distance < distances[index].distance) {
+                    statusEl.textContent = 'Moving closer';
+                    statusEl.style.color = '#00FF88';
+                } else {
+                    statusEl.style.color = '#888';
+                }
+            });
+
+            // Update timestamp
+            document.getElementById('lastUpdate').textContent = `${updateCounter % 10}s ago`;
+            
+            updateCounter++;
+        }
+
+        // Simulate automatic updates every 2 seconds
+        setInterval(updatePositions, 2000);
+
+        // Handle device clicks
+        document.querySelectorAll('.device-marker').forEach(marker => {
+            marker.addEventListener('click', function() {
+                const name = this.textContent;
+                const device = this.title.split(' - ')[0];
+                alert(`📍 ${device} Position Details:\n\n• Auto-tracked for: 15 minutes\n• Position updates: 45 times\n• Accuracy: Improving with movement\n• Last movement: 30 seconds ago`);
+            });
+        });
+
+        // Handle device list clicks
+        document.querySelectorAll('.device-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const name = this.querySelector('.device-name').textContent;
+                alert(`🧭 Navigate to ${name}?\n\n• Automatic direction guidance\n• Real-time distance updates\n• No manual triangulation needed\n• Just start walking and follow prompts`);
+            });
+        });
+
+        // Initialize
+        updatePositions();
+    </script>
+</body>
+</html>

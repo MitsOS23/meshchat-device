@@ -1,0 +1,32 @@
+# ESP-IDF build files
+build/
+sdkconfig
+sdkconfig.old
+
+# IDE files
+.vscode/
+*.code-workspace
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
+
+# Node.js (if used for web development)
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Backup files
+*.bak
+*.orig
+*~
+
+# Flash download tool files
+flash_project_args
